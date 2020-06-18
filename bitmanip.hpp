@@ -20,6 +20,7 @@
 #ifdef PREFER_STD_INCLUDES
 #include <algorithm>
 #include <array>
+#include <limits>
 
 #ifdef BITMANIP_PREFER_NAMESPACE
 namespace bitmanip {
@@ -30,6 +31,12 @@ using arr = std::array<T, N>;
 
 using std::min;
 
+/**
+ * @brief templated variable which contains the number of bits for any given integer type.
+ * Example: bits_v<uint32_t> = 32
+ */
+template <typename Int, std::enable_if_t<std::is_integral_v<Int>, int> = 0>
+constexpr size_t bits_v = std::numeric_limits<Int>::digits;
 #else
 
 #ifdef BITMANIP_PREFER_NAMESPACE
@@ -51,45 +58,15 @@ template <typename T, size_t N>
 struct arr {
     T data[N];
 };
-#endif
-// ==== UTILITY ========================================================================================================
 
 /**
  * @brief templated variable which contains the number of bits for any given integer type.
  * Example: bits_v<uint32_t> = 32
  */
 template <typename Int, std::enable_if_t<std::is_integral_v<Int>, int> = 0>
-constexpr size_t bits_v = 0;
-
-template <>
-constexpr size_t bits_v<char> = 8;
-
-template <>
-constexpr size_t bits_v<bool> = bits_v<char> * sizeof(bool);
-
-template <>
-constexpr size_t bits_v<uint8_t> = 8;
-
-template <>
-constexpr size_t bits_v<uint16_t> = 16;
-
-template <>
-constexpr size_t bits_v<uint32_t> = 32;
-
-template <>
-constexpr size_t bits_v<uint64_t> = 64;
-
-template <>
-constexpr size_t bits_v<int8_t> = 8;
-
-template <>
-constexpr size_t bits_v<int16_t> = 16;
-
-template <>
-constexpr size_t bits_v<int32_t> = 32;
-
-template <>
-constexpr size_t bits_v<int64_t> = 64;
+constexpr size_t bits_v = sizeof(Int) * 8;    
+#endif
+// ==== UTILITY ========================================================================================================
 
 /**
  * @brief Integer division but with ceiling (rounding up to the next integer) instead of rounding down as usual.
