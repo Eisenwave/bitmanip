@@ -357,10 +357,11 @@ constexpr uint64_t ileave_zeros(uint32_t input)
             dupl_bits_naive(ileave_zeros_naive(~uint32_t(0), BITS), 8),
             dupl_bits_naive(ileave_zeros_naive(~uint32_t(0), BITS), 16),
         };
+        constexpr int start = 4 - (log2_floor(BITS) / 2);
 
         uint64_t n = input;
-        for (int i = 4; i != -1; --i) {
-            const auto shift = BITS * (1 << i);
+        for (int i = start; i != -1; --i) {
+            size_t shift = BITS * (1 << i);
             n |= n << shift;
             n &= MASKS[i];
         }
@@ -391,10 +392,12 @@ constexpr uint64_t rem_ileaved_bits(uint64_t input) noexcept
             dupl_bits_naive(ileave_zeros_naive(~uint32_t(0), BITS), 16),
             dupl_bits_naive(ileave_zeros_naive(~uint32_t(0), BITS), 32),
         };
+        constexpr size_t iterations = 5 - (log2_floor(BITS) / 2);
 
         input &= MASKS[0];
-        for (size_t i = 0; i < 5; ++i) {
-            unsigned rshift = (1 << i) * BITS;
+
+        for (size_t i = 0; i < iterations; ++i) {
+            size_t rshift = (1 << i) * BITS;
             input |= input >> rshift;
             input &= MASKS[i + 1];
         }
