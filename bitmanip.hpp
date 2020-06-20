@@ -357,7 +357,8 @@ constexpr uint64_t ileave_zeros(uint32_t input)
             dupl_bits_naive(ileave_zeros_naive(~uint32_t(0), BITS), 8),
             dupl_bits_naive(ileave_zeros_naive(~uint32_t(0), BITS), 16),
         };
-        constexpr int start = 4 - (log2_floor(BITS) / 2);
+        // log2_floor(0) == 0 so this is always safe, even for 1 bit
+        constexpr int start = 4 - (log2_floor(BITS >> 1));
 
         uint64_t n = input;
         for (int i = start; i != -1; --i) {
@@ -392,7 +393,8 @@ constexpr uint64_t rem_ileaved_bits(uint64_t input) noexcept
             dupl_bits_naive(ileave_zeros_naive(~uint32_t(0), BITS), 16),
             dupl_bits_naive(ileave_zeros_naive(~uint32_t(0), BITS), 32),
         };
-        constexpr size_t iterations = 5 - (log2_floor(BITS) / 2);
+        // log2_floor(0) == 0 so this is always safe, even for 1 bit
+        constexpr size_t iterations = 5 - (log2_floor(BITS >> 1));
 
         input &= MASKS[0];
 
