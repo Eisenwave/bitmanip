@@ -148,7 +148,7 @@ BITMANIP_TEST(intlog, log10floor_manual)
     BITMANIP_STATIC_ASSERT_EQ(log10floor<std::uint32_t>(1'000u), 3u);
     BITMANIP_STATIC_ASSERT_EQ(log10floor<std::uint32_t>(9'999u), 3u);
     BITMANIP_STATIC_ASSERT_EQ(log10floor<std::uint32_t>(10000u), 4u);
-    BITMANIP_STATIC_ASSERT_EQ(log10floor<std::uint32_t>(99'999u), 4u);  // here
+    BITMANIP_STATIC_ASSERT_EQ(log10floor<std::uint32_t>(99'999u), 4u);
     BITMANIP_STATIC_ASSERT_EQ(log10floor<std::uint32_t>(100'000u), 5u);
     BITMANIP_STATIC_ASSERT_EQ(log10floor<std::uint32_t>(999'999u), 5u);
     BITMANIP_STATIC_ASSERT_EQ(log10floor<std::uint32_t>(1'000'000u), 6u);

@@ -527,7 +527,7 @@ constexpr Uint powConst(Uint exponent)
  * @return floor(log(val, BASE))
  */
 template <std::size_t BASE = 10, BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint logFloor(Uint val) noexcept
+constexpr Uint logFloor(const Uint val) noexcept
 {
     if constexpr (isPow2(BASE)) {
         return log2floor(val) / log2floor(BASE);
@@ -538,6 +538,13 @@ constexpr Uint logFloor(Uint val) noexcept
         using table_value_type = typename decltype(detail::logFloor_powers<Uint, BASE>)::value_type;
 
         const std::uint8_t guess = guesser(log2floor(val));
+
+        // ALTERNATIVE: https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
+        //   const std::uint8_t guess = guesser(log2floor(val) + 1);
+        //   return guess - (val < powers[guess]);
+        //
+        // However, we can not use this, because it overflows for zero.
+        // We want logFloor<B>(0) = 0, for any base B
 
         if constexpr (sizeof(Uint) < sizeof(table_value_type) || guesser.maxGuess() + 2 < powers.size()) {
             // handle the special case where our integer is narrower than the type of the powers table,
