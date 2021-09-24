@@ -497,10 +497,10 @@ inline bool parity(unsigned long long x) noexcept
 template <typename Uint, std::enable_if_t<std::is_unsigned_v<Uint> && (sizeof(Uint) <= 8), int> = 0>
 Uint rotr(Uint x, unsigned char rot) noexcept
 {
-    if constexpr (sizeof(x) == 1) return __builtin_rotateright8(static_cast<uint8_t>(x), rot);
-    if constexpr (sizeof(x) == 2) return __builtin_rotateright16(static_cast<uint16_t>(x), rot);
-    if constexpr (sizeof(x) == 4) return __builtin_rotateright32(static_cast<uint32_t>(x), rot);
-    if constexpr (sizeof(x) == 8) return __builtin_rotateright64(static_cast<uint64_t>(x), rot);
+    if constexpr (sizeof(x) == 1) return __builtin_rotateright8(x, rot);
+    if constexpr (sizeof(x) == 2) return __builtin_rotateright16(x, rot);
+    if constexpr (sizeof(x) == 4) return __builtin_rotateright32(x, rot);
+    if constexpr (sizeof(x) == 8) return __builtin_rotateright64(x, rot);
 }
 #endif
 
@@ -512,10 +512,10 @@ Uint rotr(Uint x, unsigned char rot) noexcept
 template <typename Uint, std::enable_if_t<std::is_unsigned_v<Uint> && (sizeof(Uint) <= 8), int> = 0>
 Uint rotl(Uint x, unsigned char rot) noexcept
 {
-    if constexpr (sizeof(x) == 1) return __builtin_rotateleft8(static_cast<uint8_t>(x), rot);
-    if constexpr (sizeof(x) == 2) return __builtin_rotateleft16(static_cast<uint16_t>(x), rot);
-    if constexpr (sizeof(x) == 4) return __builtin_rotateleft32(static_cast<uint32_t>(x), rot);
-    if constexpr (sizeof(x) == 8) return __builtin_rotateleft64(static_cast<uint64_t>(x), rot);
+    if constexpr (sizeof(x) == 1) return __builtin_rotateleft8(x, rot);
+    if constexpr (sizeof(x) == 2) return __builtin_rotateleft16(x, rot);
+    if constexpr (sizeof(x) == 4) return __builtin_rotateleft32(x, rot);
+    if constexpr (sizeof(x) == 8) return __builtin_rotateleft64(x, rot);
 }
 #endif
 

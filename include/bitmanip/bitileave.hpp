@@ -216,20 +216,39 @@ template <unsigned BITS, unsigned SHIFT = 0>
 
 namespace detail {
 
-[[nodiscard]] constexpr std::uint64_t ileave3_naive(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept
+using ull_type = unsigned long long;
+
+template <typename... Uint, std::size_t... I>
+[[nodiscard]] constexpr auto ileave_naive_impl(std::index_sequence<I...>, Uint... args) noexcept -> ull_type
 {
-    return (detail::ileaveZeros_naive(x, 2) << 2) | (detail::ileaveZeros_naive(y, 2) << 1) | ileaveZeros_naive(z, 2);
+    constexpr std::size_t max = sizeof...(I) - 1;
+    return ((ileaveZeros_naive(args, max) << max - I) | ...);
+}
+
+template <typename... Uint>
+[[nodiscard]] constexpr auto ileave_naive(Uint... args) noexcept -> std::enable_if_t<areUnsigned<Uint...>, ull_type>
+{
+    return ileave_naive_impl(std::make_index_sequence<sizeof...(Uint)>{}, args...);
+}
+
+template <typename... Uint, std::size_t... I>
+[[nodiscard]] constexpr auto ileave_impl(std::index_sequence<I...>, Uint... args) noexcept -> ull_type
+{
+    constexpr std::size_t max = sizeof...(I) - 1;
+    return (ileaveZeros_const<max, max - I>(args) | ...);
+}
+
+template <typename Uint, std::size_t... I>
+[[nodiscard]] constexpr auto ileave_arr_impl(std::index_sequence<I...>, Uint args[]) noexcept -> ull_type
+{
+    constexpr std::size_t max = sizeof...(I) - 1;
+    return (ileaveZeros_const<max, max - I>(args[I]) | ...);
 }
 
 }  // namespace detail
 
-[[nodiscard]] constexpr std::uint64_t ileave2(std::uint32_t hi, std::uint32_t lo) noexcept
-{
-    return ileaveZeros_const<1, 1>(hi) | ileaveZeros_const<1, 0>(lo);
-}
-
 /**
- * @brief Interleaves 3 integers, where x comprises the uppermost bits of each bit triple and z the lowermost bits.
+ * @brief Interleaves integers, where x comprises the uppermost bits of each bit triple and z the lowermost bits.
  *
  * This is also referred to as a Morton Code in scientific literature.
  *
@@ -238,26 +257,59 @@ namespace detail {
  * @param z the lowest bits
  * @return the interleaved bits
  */
-[[nodiscard]] constexpr std::uint64_t ileave3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept
+template <typename... Uint>
+[[nodiscard]] constexpr auto ileave(Uint... args) noexcept -> std::enable_if_t<areUnsigned<Uint...>, unsigned long long>
 {
-    return ileaveZeros_const<2, 2>(x) | ileaveZeros_const<2, 1>(y) | ileaveZeros_const<2, 0>(z);
+    return detail::ileave_impl(std::make_index_sequence<sizeof...(Uint)>{}, args...);
+}
+
+template <std::size_t N, typename Uint>
+constexpr auto ileave(Uint out[N]) noexcept -> std::enable_if_t<areUnsigned<Uint>, unsigned long long>
+{
+    return detail::ileave_arr_impl(std::make_index_sequence<N>{}, out);
+}
+
+template <typename Uint, std::size_t N>
+constexpr auto ileave(Uint (&out)[N]) noexcept -> std::enable_if_t<areUnsigned<Uint>, unsigned long long>
+{
+    return detail::ileave_arr_impl(std::make_index_sequence<N>{}, out);
 }
 
 // NUMBER DE-INTERLEAVING ==============================================================================================
 
 namespace detail {
 
-constexpr void dileave3_naive(std::uint64_t n, std::uint32_t out[3]) noexcept
+template <typename... Uint, std::size_t... I>
+constexpr void dileave_naive_impl(std::index_sequence<I...>, ull_type n, Uint &... out) noexcept
 {
-    out[0] = static_cast<std::uint32_t>(detail::remIleavedBits_naive(n >> 2, 2));
-    out[1] = static_cast<std::uint32_t>(detail::remIleavedBits_naive(n >> 1, 2));
-    out[2] = static_cast<std::uint32_t>(detail::remIleavedBits_naive(n >> 0, 2));
+    constexpr std::size_t max = sizeof...(I) - 1;
+    ((out = remIleavedBits_naive(n >> (max - I), max)), ...);
+}
+
+template <typename... Uint, std::size_t... I>
+constexpr void dileave_naive(ull_type n, Uint &... out) noexcept
+{
+    detail::dileave_naive_impl(std::make_index_sequence<sizeof...(Uint)>{}, n, out...);
+}
+
+template <typename... Uint, std::size_t... I>
+constexpr void dileave_impl(std::index_sequence<I...>, ull_type n, Uint &... out) noexcept
+{
+    constexpr std::size_t max = sizeof...(I) - 1;
+    ((out = static_cast<Uint>(remIleavedBits_const<max, max - I>(n))), ...);
+}
+
+template <typename Uint, std::size_t... I>
+constexpr void dileave_arr_impl(std::index_sequence<I...>, ull_type n, Uint out[]) noexcept
+{
+    constexpr std::size_t max = sizeof...(I) - 1;
+    ((out[I] = static_cast<Uint>(remIleavedBits_const<max, max - I>(n))), ...);
 }
 
 }  // namespace detail
 
 /**
- * @brief Deinterleaves 3 integers which are interleaved in a single number.
+ * @brief Deinterleaves integers which are interleaved in a single number.
  * Visualization: abcdefghi -> (adg, beh, cfi)
  *
  * This is also referred to as a Morton Code in scientific literature.
@@ -265,11 +317,22 @@ constexpr void dileave3_naive(std::uint64_t n, std::uint32_t out[3]) noexcept
  * @param n the number
  * @return the interleaved bits
  */
-constexpr void dileave3(std::uint64_t n, std::uint32_t out[3]) noexcept
+template <typename... Uint>
+constexpr auto dileave(unsigned long long n, Uint &... out) noexcept -> std::enable_if_t<areUnsigned<Uint...>, void>
 {
-    out[0] = static_cast<std::uint32_t>(remIleavedBits_const<2, 2>(n));
-    out[1] = static_cast<std::uint32_t>(remIleavedBits_const<2, 1>(n));
-    out[2] = static_cast<std::uint32_t>(remIleavedBits_const<2, 0>(n));
+    detail::dileave_impl(std::make_index_sequence<sizeof...(Uint)>{}, n, out...);
+}
+
+template <std::size_t N, typename Uint>
+constexpr auto dileave(unsigned long long n, Uint out[N]) noexcept -> std::enable_if_t<areUnsigned<Uint>, void>
+{
+    detail::dileave_arr_impl(std::make_index_sequence<N>{}, n, out);
+}
+
+template <typename Uint, std::size_t N>
+constexpr auto dileave(unsigned long long n, Uint (&out)[N]) noexcept -> std::enable_if_t<areUnsigned<Uint>, void>
+{
+    detail::dileave_arr_impl(std::make_index_sequence<N>{}, n, out);
 }
 
 // BYTE INTERLEAVING ===================================================================================================

@@ -330,8 +330,14 @@ template <typename T, std::size_t N>
 struct Table {
     static_assert(N != 0, "Can't create zero-size tables");
 
-    static constexpr std::size_t size = N;
+    using value_type = T;
+    static constexpr std::size_t size_value = N;
     T data[N];
+
+    constexpr std::size_t size() const noexcept
+    {
+        return size_value;
+    }
 
     constexpr T front() const noexcept
     {
@@ -354,42 +360,134 @@ struct Table {
     }
 };
 
-template <typename Uint, std::size_t BASE>
-constexpr Table<uint8_t, bits_v<Uint>> makeGuessTable()
+/// Unsafe fixed point multiplication between Q32.32 and Q64.0
+/// Unsafe because for large numbers, this operation can overflow.
+constexpr std::uint64_t unsafeMulQ32o32Q64(std::uint64_t q32o32, std::uint64_t q64) noexcept
 {
-    using resultType = decltype(makeGuessTable<Uint, BASE>());
+    return q32o32 * q64 >> std::uint64_t{32};
+}
 
-    resultType result{};
-    for (std::size_t i = 0; i < resultType::size; ++i) {
-        const Uint pow2 = static_cast<Uint>(Uint{1} << i);
-        result[i] = logFloor_naive(pow2, BASE);
+/// Unsafe fixed point multiplication between Q16.16 and Q32.0
+/// Unsafe because for large numbers, this operation can overflow.
+constexpr std::uint32_t unsafeMulQ16o16Q32(std::uint32_t q16o16, std::uint32_t q32) noexcept
+{
+    return q16o16 * q32 >> std::uint32_t{16};
+}
+
+/**
+ * @brief Compares two integers a, b.
+ * @param a the first integer
+ * @param b the second integer
+ * @return -1 if a is lower, 1 if a is greater, 0 otherwise (if they are equal).
+ */
+constexpr int cmpU64(std::uint64_t a, std::uint64_t b) noexcept
+{
+    return (b < a) - (a < b);
+}
+
+/**
+ * @brief Creates a table of approximations of the base BASE logarithm of powers of two: log_BASE(2^i).
+ * @tparam UInt an unsigned integer type of the numbers which's base BASE logarithm will be taken
+ * @tparam BASE the base
+ * @return the table of approximate logarithms
+ */
+template <typename Uint, std::size_t BASE>
+constexpr Table<std::uint8_t, bits_v<Uint>> makeGuessTable() noexcept
+{
+    Table<std::uint8_t, bits_v<Uint>> result{};
+    for (std::size_t i = 0; i < result.size(); ++i) {
+        const auto pow2 = static_cast<Uint>(Uint{1} << i);
+        result[i] = static_cast<std::uint8_t>(logFloor_naive(pow2, BASE));
     }
     return result;
 }
 
-template <typename Uint, std::size_t BASE, typename TableUint = nextLargerUintType<Uint>>
-constexpr Table<TableUint, maxExp<BASE, Uint> + 2> makePowerTable()
+template <std::size_t SIZE>
+constexpr int compareApproximationToGuessTable(std::uint64_t approxFactor,
+                                               const Table<std::uint8_t, SIZE> &table) noexcept
 {
-    // the size of the table is maxPow<BASE, Uint> + 2 because we need to store the maximum power
-    // +1 because we need to contain it, we are dealing with a size, not an index
-    // +1 again because for narrow integers, we access one beyond the "end" of the table
-    //
-    // as a result, the last multiplication with BASE might overflow, but this is perfectly normal
-    using resultType = decltype(makePowerTable<Uint, BASE, TableUint>());
+    for (unsigned b = 0; b < SIZE; ++b) {
+        std::uint64_t actualLog = table[b];
+        std::uint64_t approxLog = unsafeMulQ32o32Q64(approxFactor, b);
+        if (int cmp = cmpU64(approxLog, actualLog); cmp != 0) {
+            return cmp;
+        }
+    }
+    return 0;
+}
 
-    resultType result{};
+constexpr std::uint64_t NO_APPROXIMATION = ~std::uint64_t{0};
+
+/**
+ * @brief Approximates the logarithm guess table using a Q32.32 number.
+ * This exploits the fact that to convert from the logarithm base 2, to logarithm base B, we need to multiply with a
+ * constant factor.
+ * This constant factor is being approximated in a bit-guessing approach.
+ * The result of this function is guaranteed to only set the most significant bits necessary.
+ * E.g. if the result has the lowest 16 bits not set, the approximation can also be truncated to Q16.16.
+ * @tparam SIZE the size of the table
+ * @param table the table to approximate, where table[i] <= i
+ * @return the fixed-point number approximating the table
+ */
+template <std::size_t SIZE>
+constexpr std::uint64_t approximateGuessTable(const Table<std::uint8_t, SIZE> &table) noexcept
+{
+    std::uint64_t result = 0;
+    for (unsigned b = 33; b-- != 0;) {
+        std::uint64_t guessedResult = result | (std::uint64_t{1} << b);
+        int cmp = compareApproximationToGuessTable(guessedResult, table);
+        if (cmp == 0) {
+            return guessedResult;
+        }
+        if (cmp == -1) {
+            result = guessedResult;
+        }
+    }
+    return NO_APPROXIMATION;
+}
+
+template <typename Uint, std::size_t BASE>
+struct LogFloorGuesser {
+    static constexpr Table<std::uint8_t, bits_v<Uint>> guessTable = makeGuessTable<Uint, BASE>();
+    static constexpr std::uint64_t guessTableApproximation = approximateGuessTable(guessTable);
+
+    constexpr std::uint8_t operator()(std::uint8_t log2) const noexcept
+    {
+        if constexpr (guessTableApproximation == NO_APPROXIMATION) {
+            return guessTable[log2];
+        }
+        else if constexpr ((guessTableApproximation & makeMask<std::uint64_t>(16u)) == 0) {
+            constexpr std::uint32_t lessPreciseApproximation = guessTableApproximation >> 16;
+            return unsafeMulQ16o16Q32(lessPreciseApproximation, log2);
+        }
+        else {
+            return unsafeMulQ32o32Q64(guessTableApproximation, log2);
+        }
+    }
+
+    constexpr std::uint8_t maxGuess() const noexcept
+    {
+        return guessTable.back();
+    }
+};
+
+template <typename Uint, std::size_t BASE, typename TableUint = nextLargerUintType<Uint>>
+constexpr auto makePowerTable() noexcept
+{
+    // the size of the table is maxExp<BASE, Uint> + 2 because we need to store the maximum power
+    // +1 because we need to store maxExp, which is an index, not a size
+    // +1 again because for narrow integers, we would like to access one beyond the "end" of the table
+    //
+    // as a result, the last multiplication with BASE in this function might overflow, but this is perfectly normal
+    Table<TableUint, maxExp<BASE, Uint> + 2> result{};
     std::uintmax_t x = 1;
-    for (std::size_t i = 0; i < resultType::size; ++i, x *= BASE) {
+    for (std::size_t i = 0; i < result.size(); ++i, x *= BASE) {
         result[i] = static_cast<TableUint>(x);
     }
     return result;
 }
 
-// table that maps from log_2(val) -> approximate log_N(val)
-template <typename Uint, std::size_t BASE>
-constexpr auto logFloor_guesses = detail::makeGuessTable<Uint, BASE>();
-
-// table that maps from log_N(val) -> pow(N, val + 1)
+/// table that maps from log_N(val) -> pow(N, val + 1)
 template <typename Uint, std::size_t BASE>
 constexpr auto logFloor_powers = detail::makePowerTable<Uint, BASE>();
 
@@ -435,15 +533,29 @@ constexpr Uint logFloor(Uint val) noexcept
         return log2floor(val) / log2floor(BASE);
     }
     else {
-        constexpr auto &guesses = detail::logFloor_guesses<Uint, BASE>;
+        constexpr detail::LogFloorGuesser<Uint, BASE> guesser;
         constexpr auto &powers = detail::logFloor_powers<Uint, BASE>;
+        using table_value_type = typename decltype(detail::logFloor_powers<Uint, BASE>)::value_type;
 
-        const std::uint8_t guess = guesses[log2floor(val)];
+        const std::uint8_t guess = guesser(log2floor(val));
 
-        if constexpr (sizeof(Uint) < sizeof(std::uint64_t) || guesses.back() + 2 < powers.size) {
+        if constexpr (sizeof(Uint) < sizeof(table_value_type) || guesser.maxGuess() + 2 < powers.size()) {
+            // handle the special case where our integer is narrower than the type of the powers table,
+            // or by coincidence, the greatest guessed power of BASE is representable by the powers table.
+            // e.g. for base 10:
+            //   greatest guess for 64-bit is floor(log10(2^63)) = 18
+            //   greatest representable power of 10 for 64-bit is pow(10, 19)
+            //     pow(10, 18 + 1) <= pow(10, 19) => we can always access powers[guess + 1]
+            //   BUT
+            //   greatest guess for 8-bit is floor(log10(2^7)) = 2
+            //   greatest representable power of 10 for 8-bit is pow(10, 2) = 100
+            //     pow(10, 2 + 1) > pow(10, 2)    => we can not always access powers[guess + 1]
+            //     (however, the powers table is not made of 8-bit integers, so we actually can)
             return guess + (val >= powers[guess + 1]);
         }
         else {
+            // the fallback case, where unfortunately, we must perform an integer division due to the table running
+            // out of precision
             return guess + (val / BASE >= powers[guess]);
         }
     }

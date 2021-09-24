@@ -8,9 +8,9 @@
  * - ceil is often necessary to get the size of a containing array of data which is not aligned to the container size
  */
 
-#include <type_traits>
+#include "bit.hpp"
 
-#include <climits>
+#include <type_traits>
 
 namespace bitmanip {
 
@@ -163,8 +163,8 @@ constexpr Rounding DEFAULT_ROUND_TIE_BREAK = Rounding::MAGNIFY;
 template <Rounding TIE_BREAK = DEFAULT_ROUND_TIE_BREAK, typename Dividend, typename Divisor>
 constexpr commonSignedType<Dividend, Divisor> divRound(Dividend x, Divisor y) noexcept
 {
-    signed char sgnX = detail::divSgn(x);
-    signed char sgnY = detail::divSgn(y);
+    signed char sgnX = x < 0 ? -1 : 1;
+    signed char sgnY = y < 0 ? -1 : 1;
     signed char sgnQ = sgnX * sgnY;
 
     auto cx = static_cast<commonSignedType<Dividend, Divisor>>(x);
@@ -214,6 +214,110 @@ constexpr commonSignedType<Dividend, Divisor> div(Dividend x, Divisor y) noexcep
         return divRound<TIE_BREAK>(x, y);
     }
 }
+
+// UNSIGNED REMAINDER (MODULUS) ========================================================================================
+
+template <typename Int, typename Uint, std::enable_if_t<(std::is_integral_v<Int> && std::is_unsigned_v<Uint>), int> = 0>
+constexpr Uint umod(Int n, Uint mod) noexcept
+{
+    if constexpr (std::is_unsigned_v<Int>) {
+        return n % mod;
+    }
+    else {
+        Uint rem = n % static_cast<Int>(mod);
+        return static_cast<Uint>(rem) + (mod & signFill(rem));
+    }
+}
+
+// MIDPOINT ============================================================================================================
+
+template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
+constexpr Uint midpointFloor(Uint x, Uint y)
+{
+    Uint sum = x + y;
+    return sum >> Uint{1} | makeHighest<Uint>(sum < x);
+}
+
+template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
+constexpr Uint midpointCeil(Uint x, Uint y)
+{
+    return midpointFloor(x, y) + ((x + y) & 1);
+}
+
+template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
+constexpr Uint midpointToLeft(Uint x, Uint y)
+{
+    return midpointFloor(x, y) + (Uint{x > y} & (x + y) & Uint{1});
+}
+
+#include <climits>
+
+static_assert(divRound(0, -1) == 0);
+static_assert(divRound(0, 1) == 0);
+static_assert(divRound(0, 2) == 0);
+static_assert(divRound(1, 1) == 1);
+static_assert(divRound(-1, -1) == 1);
+
+static_assert(divRound(0, 4) == 0);
+static_assert(divRound(1, 4) == 0);
+static_assert(divRound(2, 4) == 1);
+static_assert(divRound(3, 4) == 1);
+static_assert(divRound(4, 4) == 1);
+
+static_assert(divRound(-1, 4) == 0);
+static_assert(divRound(-2, 4) == -1);
+static_assert(divRound(-3, 4) == -1);
+static_assert(divRound(-4, 4) == -1);
+
+static_assert(divRound(-1, 4) == 0);
+static_assert(divRound(-2, 4) == -1);
+static_assert(divRound(-3, 4) == -1);
+static_assert(divRound(-4, 4) == -1);
+
+static_assert(divRound(-1, -4) == 0);
+static_assert(divRound(-2, -4) == 1);
+static_assert(divRound(-3, -4) == 1);
+static_assert(divRound(-4, -4) == 1);
+
+static_assert(divRound(-1, -4) == 0);
+static_assert(divRound(-2, -4) == 1);
+static_assert(divRound(-3, -4) == 1);
+static_assert(divRound(-4, -4) == 1);
+
+static_assert(divRound(127, 255) == 0);
+static_assert(divRound(128, 255) == 1);
+
+static_assert(divRound(INT_MAX, INT_MAX) == 1);
+static_assert(divRound(INT_MAX / 2, INT_MAX) == 0);
+
+static_assert(divRound(2, 5) == 0);
+static_assert(divRound(3, 5) == 1);
+static_assert(divRound(7, 5) == 1);
+static_assert(divRound(8, 5) == 2);
+
+static_assert(divRound(-2, 5) == 0);
+static_assert(divRound(-3, 5) == -1);
+static_assert(divRound(-7, 5) == -1);
+static_assert(divRound(-8, 5) == -2);
+
+static_assert(divRound(INT_MIN, INT_MIN) == 1);
+static_assert(divRound(INT_MIN / 2, INT_MIN) == 1);
+static_assert(divRound(INT_MIN, INT_MIN / 2) == 2);
+
+constexpr unsigned (*midpoint_eisie)(unsigned, unsigned) = midpointToLeft;
+
+static_assert(midpoint_eisie(0, 0) == 0);
+static_assert(midpoint_eisie(1, 1) == 1);
+static_assert(midpoint_eisie(0, 1) == 0);
+static_assert(midpoint_eisie(1, 0) == 1);
+
+static_assert(midpoint_eisie(0, 0) == 0);
+static_assert(midpoint_eisie(10, 20) == 15);
+static_assert(midpoint_eisie(20, 10) == 15);
+static_assert(midpoint_eisie(21, 10) == 16);
+static_assert(midpoint_eisie(10, 21) == 15);
+static_assert(midpoint_eisie(UINT_MAX, UINT_MAX) == UINT_MAX);
+static_assert(midpoint_eisie(2'000'000'000u, 4'000'000'000u) == 3'000'000'000);
 
 }  // namespace bitmanip
 

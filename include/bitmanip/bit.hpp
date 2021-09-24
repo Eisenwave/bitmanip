@@ -34,17 +34,19 @@ namespace detail {
 template <typename Int>
 auto nextLargerUint_impl()
 {
-    if constexpr (bits_v<Int> >= 8) {
-        return std::uint_least16_t{0};
+    constexpr auto bits = bits_v<Int>;
+
+    if constexpr (bits >= 64) {
+        return std::uintmax_t{0};
     }
-    else if constexpr (bits_v<Int> >= 16) {
-        return std::uint_least32_t{0};
-    }
-    else if constexpr (bits_v<Int> >= 32) {
+    else if constexpr (bits >= 32) {
         return std::uint_least64_t{0};
     }
-    else {
-        return std::uintmax_t{0};
+    else if constexpr (bits >= 16) {
+        return std::uint_least32_t{0};
+    }
+    else if constexpr (bits >= 8) {
+        return std::uint_least16_t{0};
     }
 }
 
@@ -52,6 +54,9 @@ auto nextLargerUint_impl()
 
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
 using nextLargerUintType = decltype(detail::nextLargerUint_impl<Uint>());
+
+template <typename... T>
+constexpr bool areUnsigned = (std::is_unsigned_v<T> && ...);
 
 // ALTERNATING BIT SEQUENCE ============================================================================================
 
@@ -129,6 +134,23 @@ template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
 [[nodiscard]] constexpr Uint makeMask(Uint length) noexcept
 {
     return (Uint{1} << length) - Uint{1};
+}
+
+template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
+[[nodiscard]] constexpr Uint makeHighest(bool value) noexcept
+{
+    return Uint{value} << (bits_v<Uint> - 1);
+}
+
+template <BITMANIP_INTEGRAL_TYPENAME(Int)>
+[[nodiscard]] constexpr Int signFill(Int input) noexcept
+{
+    if constexpr (std::is_signed_v<Int>) {
+        return input >> (bits_v<Int> - Int{1});
+    }
+    else {
+        return static_cast<Int>(signFill(static_cast<std::make_signed_t<Int>>(input)));
+    }
 }
 
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>

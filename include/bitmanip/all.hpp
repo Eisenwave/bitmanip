@@ -8,7 +8,6 @@
 #include "bitileave.hpp"
 #include "bitrev.hpp"
 #include "bitrot.hpp"
-#include "bitset.hpp"
 
 #include "intdiv.hpp"
 #include "intlog.hpp"

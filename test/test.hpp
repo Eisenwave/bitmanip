@@ -56,12 +56,12 @@ std::size_t getTestCount();
                                                                                                             \
     void BITMANIP_TEST_CLASS_NAME(category, name)::run() const
 
-#ifndef DISABLE_STATIC_TESTS
+#ifndef BITMANIP_DISABLE_STATIC_TESTS
 #define BITMANIP_STATIC_ASSERT_EQ(x, y) \
     static_assert(x == y);              \
     BITMANIP_ASSERT_EQ(x, y)
 #else
-#define STATIC_ASSERT_EQ(x, y) TEST_ASSERT_EQ(x, y)
+#define BITMANIP_STATIC_ASSERT_EQ(x, y) BITMANIP_ASSERT_EQ(x, y)
 #endif
 
 }  // namespace bitmanip

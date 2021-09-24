@@ -20,7 +20,7 @@ template <typename From, typename To>
 constexpr bool isStaticCastable = not std::is_same_v<decltype(isStaticCastable_impl<From, To>(0)), void>;
 
 template <typename T>
-auto stringify_impl(const T &t) noexcept
+auto stringify_impl(const T &t)
 {
     if constexpr (std::is_same_v<bool, T>) {
         return std::string{t ? "true" : "false"};
@@ -54,10 +54,24 @@ auto stringify_impl(const T &t) noexcept
     }
 }
 
+template <typename T, std::size_t N>
+auto stringify_impl(const T (&arr)[N])
+{
+    std::string result = "{" + stringify_impl(arr[0]);
+    result.reserve((result.length() + 1) * N + 1);
+
+    for (std::size_t i = 1; i < N; ++i) {
+        result += ", ";
+        result += stringify_impl(arr[i]);
+    }
+
+    return result + '}';
+}
+
 }  // namespace detail
 
 template <typename T>
-constexpr bool isStringifieable = not std::is_same_v<decltype(detail::stringify_impl(std::declval<T>())), void>;
+constexpr bool isStringifieable = not std::is_same_v<void, decltype(detail::stringify_impl(std::declval<T>()))>;
 
 /**
  * @brief Stringifies any type. If the type is not stringifieable, substitution fails.
@@ -149,7 +163,7 @@ constexpr bool operator>(LogLevel x, LogLevel y) noexcept
 /// The function pointer type of the logging callback.
 using LogCallback = void (*)(std::string_view);
 /// The function pointer type of the logging formatter.
-using LogFormatter = void (*)(LogLevel level, SourceLocation location, const std::string_view msg[], std::size_t);
+using LogFormatter = void (*)(LogLevel, SourceLocation, const std::string_view[], std::size_t);
 /// The function pointer type of the logging flusher.
 using LogFlusher = void (*)();
 
@@ -296,8 +310,71 @@ void vlog(LogLevel level, SourceLocation loc, const Args &... args)
 {
     BITMANIP_LOG_IMPL(FAILURE, loc.file, loc.function, loc.line, "assertion error in ", loc.function, "(): ", msg);
     flushLog();
-    throw;
+    throw 0;
 }
+
+namespace detail {
+
+enum class Cmp { EQ, NE, GT, LT, GE, LE, _ };
+
+constexpr bool eq(Cmp a, Cmp b)
+{
+    return static_cast<int>(a) == static_cast<int>(b);
+}
+constexpr Cmp operator==(Cmp, Cmp)
+{
+    return Cmp::EQ;
+}
+constexpr Cmp operator!=(Cmp, Cmp)
+{
+    return Cmp::NE;
+}
+constexpr Cmp operator>(Cmp, Cmp)
+{
+    return Cmp::GT;
+}
+constexpr Cmp operator<(Cmp, Cmp)
+{
+    return Cmp::LT;
+}
+constexpr Cmp operator>=(Cmp, Cmp)
+{
+    return Cmp::GE;
+}
+constexpr Cmp operator<=(Cmp, Cmp)
+{
+    return Cmp::LE;
+}
+
+template <Cmp Cmp, typename L, typename R>
+constexpr bool cmp(const L &l, const R &r) noexcept
+{
+    if constexpr (eq(Cmp, Cmp::EQ))
+        return l == r;
+    else if constexpr (eq(Cmp, Cmp::NE))
+        return l != r;
+    else if constexpr (eq(Cmp, Cmp::GT))
+        return l > r;
+    else if constexpr (eq(Cmp, Cmp::LT))
+        return l < r;
+    else if constexpr (eq(Cmp, Cmp::GE))
+        return l >= r;
+    else if constexpr (eq(Cmp, Cmp::LE))
+        return l <= r;
+}
+
+template <Cmp Cmp, typename L, typename R, std::size_t N>
+constexpr bool cmp(const L (&l)[N], const R (&r)[N]) noexcept
+{
+    for (std::size_t i = 0; i < N; ++i) {
+        if (not cmp<Cmp>(l[i], r[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+}  // namespace detail
 
 // The following definitions using ternary operators and the do ... while(false) pattern circumvent possible syntax
 // breaks in if-else chains.
@@ -314,7 +391,8 @@ void vlog(LogLevel level, SourceLocation loc, const Args &... args)
     do {                                                                                                           \
         auto &&tl_ = (l);                                                                                          \
         auto &&tr_ = (r);                                                                                          \
-        BITMANIP_ASSERT_IMPL(tl_ op tr_,                                                                           \
+        constexpr auto cmp_ = ::bitmanip::detail::Cmp::_ op ::bitmanip::detail::Cmp::_;                            \
+        BITMANIP_ASSERT_IMPL(::bitmanip::detail::cmp<cmp_>(tl_, tr_),                                              \
                              "Comparison failed: " #l " " #op " " #r " (with \"" #l "\"=" +                        \
                                  ::bitmanip::stringify(tl_) + ", \"" #r "\"=" + ::bitmanip::stringify(tr_) + ")"); \
     } while (false)
