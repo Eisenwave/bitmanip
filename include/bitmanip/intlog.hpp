@@ -392,19 +392,19 @@ constexpr int cmpU64(std::uint64_t a, std::uint64_t b) noexcept
  * @return the table of approximate logarithms
  */
 template <typename Uint, std::size_t BASE>
-constexpr Table<std::uint8_t, bits_v<Uint>> makeGuessTable() noexcept
+constexpr Table<unsigned char, bits_v<Uint>> makeGuessTable() noexcept
 {
-    Table<std::uint8_t, bits_v<Uint>> result{};
+    Table<unsigned char, bits_v<Uint>> result{};
     for (std::size_t i = 0; i < result.size(); ++i) {
         const auto pow2 = static_cast<Uint>(Uint{1} << i);
-        result[i] = static_cast<std::uint8_t>(logFloor_naive(pow2, BASE));
+        result[i] = static_cast<unsigned char>(logFloor_naive(pow2, BASE));
     }
     return result;
 }
 
 template <std::size_t SIZE>
 constexpr int compareApproximationToGuessTable(std::uint64_t approxFactor,
-                                               const Table<std::uint8_t, SIZE> &table) noexcept
+                                               const Table<unsigned char, SIZE> &table) noexcept
 {
     for (unsigned b = 0; b < SIZE; ++b) {
         std::uint64_t actualLog = table[b];
@@ -430,7 +430,7 @@ constexpr std::uint64_t NO_APPROXIMATION = ~std::uint64_t{0};
  * @return the fixed-point number approximating the table
  */
 template <std::size_t SIZE>
-constexpr std::uint64_t approximateGuessTable(const Table<std::uint8_t, SIZE> &table) noexcept
+constexpr std::uint64_t approximateGuessTable(const Table<unsigned char, SIZE> &table) noexcept
 {
     std::uint64_t result = 0;
     for (unsigned b = 33; b-- != 0;) {
@@ -448,10 +448,10 @@ constexpr std::uint64_t approximateGuessTable(const Table<std::uint8_t, SIZE> &t
 
 template <typename Uint, std::size_t BASE>
 struct LogFloorGuesser {
-    static constexpr Table<std::uint8_t, bits_v<Uint>> guessTable = makeGuessTable<Uint, BASE>();
+    static constexpr Table<unsigned char, bits_v<Uint>> guessTable = makeGuessTable<Uint, BASE>();
     static constexpr std::uint64_t guessTableApproximation = approximateGuessTable(guessTable);
 
-    constexpr std::uint8_t operator()(std::uint8_t log2) const noexcept
+    constexpr unsigned char operator()(unsigned char log2) const noexcept
     {
         if constexpr (guessTableApproximation == NO_APPROXIMATION) {
             return guessTable[log2];
@@ -465,7 +465,7 @@ struct LogFloorGuesser {
         }
     }
 
-    constexpr std::uint8_t maxGuess() const noexcept
+    constexpr unsigned char maxGuess() const noexcept
     {
         return guessTable.back();
     }
@@ -549,14 +549,14 @@ constexpr auto logFloor(const Uint val) noexcept -> std::enable_if_t<(std::is_un
             //   greatest representable power of 10 for 8-bit is pow(10, 2) = 100
             //     pow(10, 2 + 1) > pow(10, 2)    => we can not always access powers[guess + 1]
             //     (however, the powers table is not made of 8-bit integers, so we actually can)
-            const std::uint8_t guess = guesser(log2floor(val));
+            const unsigned char guess = guesser(log2floor(val));
             return guess + (val >= powers[guess + 1]);
         }
         else {
             // ALTERNATIVE from: https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
             // This version is always safe from overflow for any non-powers of two.
             // However, we want zero-preservation and need an additional zero-check compared to the linked page.
-            const std::uint8_t guess = guesser(log2floor(val) + 1);
+            const unsigned char guess = guesser(log2floor(val) + 1);
             return (guess - (val < powers[guess])) * (val != 0);
         }
     }

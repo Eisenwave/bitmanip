@@ -417,14 +417,14 @@ constexpr bool cmp(const L (&l)[N], const R (&r)[N]) noexcept
 
 // COMMON ASSERTS (ALWAYS DEFINED THE SAME) ============================================================================
 
-#define BITMANIP_ASSERT(expr) BITMANIP_ASSERT_IMPL(expr, "\"" #expr "\" evaluated to false")
+#define BITMANIP_ASSERT(...) BITMANIP_ASSERT_IMPL((__VA_ARGS__), "\"" #__VA_ARGS__ "\" evaluated to false")
 
 #define BITMANIP_ASSERT_MSG(expr, msg) BITMANIP_ASSERT_IMPL(expr, '"' + ::std::string{msg} + '"')
-#define BITMANIP_ASSERT_FAIL(msg) BITMANIP_ASSERT_MSG(false, msg)
+#define BITMANIP_ASSERT_FAIL(...) BITMANIP_ASSERT_MSG(false, __VA_ARGS__)
 #define BITMANIP_ASSERT_UNREACHABLE() BITMANIP_ASSERT_FAIL("This execution path must be unreachable")
 
-#define BITMANIP_ASSERT_NOTNULL(expr) BITMANIP_ASSERT_IMPL(expr != nullptr, #expr " must never be null")
-#define BITMANIP_ASSERT_NULL(expr) BITMANIP_ASSERT_IMPL(expr == nullptr, #expr " must always be null")
+#define BITMANIP_ASSERT_NOTNULL(...) BITMANIP_ASSERT_IMPL((__VA_ARGS__) != nullptr, #__VA_ARGS__ " must never be null")
+#define BITMANIP_ASSERT_NULL(...) BITMANIP_ASSERT_IMPL((__VA_ARGS__) == nullptr, #__VA_ARGS__ " must always be null")
 #define BITMANIP_ASSERT_EQ(l, r) BITMANIP_ASSERT_CMP(l, r, ==)
 #define BITMANIP_ASSERT_NE(l, r) BITMANIP_ASSERT_CMP(l, r, !=)
 #define BITMANIP_ASSERT_LT(l, r) BITMANIP_ASSERT_CMP(l, r, <)

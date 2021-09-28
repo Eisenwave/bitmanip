@@ -52,11 +52,6 @@ using commonSignedType = std::conditional_t<std::is_unsigned_v<A> && std::is_uns
                                             std::common_type_t<A, B>,
                                             std::common_type_t<std::make_signed_t<A>, std::make_signed_t<B>>>;
 
-static_assert(std::is_same_v<unsigned, commonSignedType<unsigned, unsigned>>);
-static_assert(std::is_same_v<int, commonSignedType<unsigned, int>>);
-static_assert(std::is_same_v<int, commonSignedType<int, unsigned>>);
-static_assert(std::is_same_v<int, commonSignedType<int, int>>);
-
 /**
  * Performs a division with the usual truncating behavior of C/C++.
  * However, the result is the common signed type of the dividend and divisor, contrary to the usual unsigned conversion.
@@ -241,83 +236,14 @@ constexpr Uint midpointFloor(Uint x, Uint y)
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
 constexpr Uint midpointCeil(Uint x, Uint y)
 {
-    return midpointFloor(x, y) + ((x + y) & 1);
+    return midpointFloor(x, y) + ((x + y) & Uint{1});
 }
 
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
 constexpr Uint midpointToLeft(Uint x, Uint y)
 {
-    return midpointFloor(x, y) + (Uint{x > y} & (x + y) & Uint{1});
+    return midpointFloor(x, y) + ((x + y) & Uint{1} & Uint{x > y});
 }
-
-#include <climits>
-
-static_assert(divRound(0, -1) == 0);
-static_assert(divRound(0, 1) == 0);
-static_assert(divRound(0, 2) == 0);
-static_assert(divRound(1, 1) == 1);
-static_assert(divRound(-1, -1) == 1);
-
-static_assert(divRound(0, 4) == 0);
-static_assert(divRound(1, 4) == 0);
-static_assert(divRound(2, 4) == 1);
-static_assert(divRound(3, 4) == 1);
-static_assert(divRound(4, 4) == 1);
-
-static_assert(divRound(-1, 4) == 0);
-static_assert(divRound(-2, 4) == -1);
-static_assert(divRound(-3, 4) == -1);
-static_assert(divRound(-4, 4) == -1);
-
-static_assert(divRound(-1, 4) == 0);
-static_assert(divRound(-2, 4) == -1);
-static_assert(divRound(-3, 4) == -1);
-static_assert(divRound(-4, 4) == -1);
-
-static_assert(divRound(-1, -4) == 0);
-static_assert(divRound(-2, -4) == 1);
-static_assert(divRound(-3, -4) == 1);
-static_assert(divRound(-4, -4) == 1);
-
-static_assert(divRound(-1, -4) == 0);
-static_assert(divRound(-2, -4) == 1);
-static_assert(divRound(-3, -4) == 1);
-static_assert(divRound(-4, -4) == 1);
-
-static_assert(divRound(127, 255) == 0);
-static_assert(divRound(128, 255) == 1);
-
-static_assert(divRound(INT_MAX, INT_MAX) == 1);
-static_assert(divRound(INT_MAX / 2, INT_MAX) == 0);
-
-static_assert(divRound(2, 5) == 0);
-static_assert(divRound(3, 5) == 1);
-static_assert(divRound(7, 5) == 1);
-static_assert(divRound(8, 5) == 2);
-
-static_assert(divRound(-2, 5) == 0);
-static_assert(divRound(-3, 5) == -1);
-static_assert(divRound(-7, 5) == -1);
-static_assert(divRound(-8, 5) == -2);
-
-static_assert(divRound(INT_MIN, INT_MIN) == 1);
-static_assert(divRound(INT_MIN / 2, INT_MIN) == 1);
-static_assert(divRound(INT_MIN, INT_MIN / 2) == 2);
-
-constexpr unsigned (*midpoint_eisie)(unsigned, unsigned) = midpointToLeft;
-
-static_assert(midpoint_eisie(0, 0) == 0);
-static_assert(midpoint_eisie(1, 1) == 1);
-static_assert(midpoint_eisie(0, 1) == 0);
-static_assert(midpoint_eisie(1, 0) == 1);
-
-static_assert(midpoint_eisie(0, 0) == 0);
-static_assert(midpoint_eisie(10, 20) == 15);
-static_assert(midpoint_eisie(20, 10) == 15);
-static_assert(midpoint_eisie(21, 10) == 16);
-static_assert(midpoint_eisie(10, 21) == 15);
-static_assert(midpoint_eisie(UINT_MAX, UINT_MAX) == UINT_MAX);
-static_assert(midpoint_eisie(2'000'000'000u, 4'000'000'000u) == 3'000'000'000);
 
 }  // namespace bitmanip
 

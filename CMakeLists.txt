@@ -10,6 +10,10 @@ set(TEST_DIR test)
 
 add_executable(bitmanip_test
     ${TEST_DIR}/main.cpp
+    ${TEST_DIR}/test_bit.cpp
+    ${TEST_DIR}/test_bitileave.cpp
+    ${TEST_DIR}/test_intdiv.cpp
+    ${TEST_DIR}/test_intlog.cpp
     ${TEST_DIR}/test.cpp
     ${TEST_DIR}/test.hpp
     ${TEST_DIR}/assert.cpp
