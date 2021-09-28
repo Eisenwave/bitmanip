@@ -500,10 +500,10 @@ constexpr auto powConst_powers = detail::makePowerTable<Uint, BASE, Uint>();
  * @brief Computes pow(BASE, exponent) where BASE is known at compile-time.
  */
 template <std::size_t BASE, BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint powConst(Uint exponent)
+constexpr Uint powConst(const Uint exponent) noexcept
 {
     if constexpr (isPow2(BASE)) {
-        return 1 << (exponent * log2floor(BASE));
+        return Uint{1} << (exponent * log2floor(BASE));
     }
     else {
         return detail::powConst_powers<Uint, BASE>[exponent];
@@ -526,8 +526,8 @@ constexpr Uint powConst(Uint exponent)
  * @param val the input value
  * @return floor(log(val, BASE))
  */
-template <std::size_t BASE = 10, BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint logFloor(const Uint val) noexcept
+template <std::size_t BASE = 10, typename Uint>
+constexpr auto logFloor(const Uint val) noexcept -> std::enable_if_t<(std::is_unsigned_v<Uint> && BASE >= 2), Uint>
 {
     if constexpr (isPow2(BASE)) {
         return log2floor(val) / log2floor(BASE);
@@ -536,15 +536,6 @@ constexpr Uint logFloor(const Uint val) noexcept
         constexpr detail::LogFloorGuesser<Uint, BASE> guesser;
         constexpr auto &powers = detail::logFloor_powers<Uint, BASE>;
         using table_value_type = typename decltype(detail::logFloor_powers<Uint, BASE>)::value_type;
-
-        const std::uint8_t guess = guesser(log2floor(val));
-
-        // ALTERNATIVE: https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
-        //   const std::uint8_t guess = guesser(log2floor(val) + 1);
-        //   return guess - (val < powers[guess]);
-        //
-        // However, we can not use this, because it overflows for zero.
-        // We want logFloor<B>(0) = 0, for any base B
 
         if constexpr (sizeof(Uint) < sizeof(table_value_type) || guesser.maxGuess() + 2 < powers.size()) {
             // handle the special case where our integer is narrower than the type of the powers table,
@@ -558,12 +549,15 @@ constexpr Uint logFloor(const Uint val) noexcept
             //   greatest representable power of 10 for 8-bit is pow(10, 2) = 100
             //     pow(10, 2 + 1) > pow(10, 2)    => we can not always access powers[guess + 1]
             //     (however, the powers table is not made of 8-bit integers, so we actually can)
+            const std::uint8_t guess = guesser(log2floor(val));
             return guess + (val >= powers[guess + 1]);
         }
         else {
-            // the fallback case, where unfortunately, we must perform an integer division due to the table running
-            // out of precision
-            return guess + (val / BASE >= powers[guess]);
+            // ALTERNATIVE from: https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
+            // This version is always safe from overflow for any non-powers of two.
+            // However, we want zero-preservation and need an additional zero-check compared to the linked page.
+            const std::uint8_t guess = guesser(log2floor(val) + 1);
+            return (guess - (val < powers[guess])) * (val != 0);
         }
     }
 }
@@ -571,8 +565,8 @@ constexpr Uint logFloor(const Uint val) noexcept
 /**
  * @brief Convenience function that forwards to logFloor<10>.
  */
-template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint log10floor(Uint val)
+template <typename Uint>
+constexpr auto log10floor(const Uint val) noexcept -> std::enable_if_t<std::is_unsigned_v<Uint>, Uint>
 {
     return logFloor<10, Uint>(val);
 }
@@ -580,8 +574,8 @@ constexpr Uint log10floor(Uint val)
 /**
  * @brief Computes the number of digits required to represent a number with a given base.
  */
-template <std::size_t BASE = 10, BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint digitCount(Uint val) noexcept
+template <std::size_t BASE = 10, typename Uint>
+constexpr auto digitCount(const Uint val) noexcept -> std::enable_if_t<(std::is_unsigned_v<Uint> && BASE >= 2), Uint>
 {
     return logFloor<BASE>(val) + 1;
 }
