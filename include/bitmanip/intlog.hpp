@@ -45,7 +45,7 @@ inline Int log2floor_builtin(Int v)
  * @return true if val is a power of 2 or if val is zero
  */
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr bool isPow2or0(Uint val)
+[[nodiscard]] constexpr bool isPow2or0(Uint val) noexcept
 {
     return (val & (val - 1)) == 0;
 }
@@ -57,7 +57,7 @@ constexpr bool isPow2or0(Uint val)
  * @see is_pow2_or_zero
  */
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr bool isPow2(Uint val)
+[[nodiscard]] constexpr bool isPow2(Uint val) noexcept
 {
     return val != 0 && isPow2or0(val);
 }
@@ -69,7 +69,7 @@ namespace detail {
 #ifdef BITMANIP_HAS_BUILTIN_LOG2FLOOR
 #define BITMANIP_HAS_BUILTIN_CEILPOW2
 template <typename Uint>
-inline Uint ceilPow2m1_builtin(Uint v)
+[[nodiscard]] inline Uint ceilPow2m1_builtin(Uint v) noexcept
 {
     Uint log = log2floor_builtin(v);
     return v | (Uint{1} << log) - Uint{1};
@@ -77,7 +77,7 @@ inline Uint ceilPow2m1_builtin(Uint v)
 #endif
 
 template <typename Uint>
-constexpr Uint ceilPow2m1_shift(Uint v)
+[[nodiscard]] constexpr Uint ceilPow2m1_shift(Uint v) noexcept
 {
     constexpr std::size_t iterations = log2bits_v<Uint>;
     for (std::size_t i = 0; i < iterations; ++i) {
@@ -96,7 +96,7 @@ constexpr Uint ceilPow2m1_shift(Uint v)
  * @param v the value to round up
  */
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint ceilPow2m1(Uint v)
+[[nodiscard]] constexpr Uint ceilPow2m1(Uint v) noexcept
 {
 // The codegen on other platforms such as ARM is actually better for the repeated shift version.
 // Each step on ARM can be performed with a flexible operand which performs a shift.
@@ -116,7 +116,7 @@ constexpr Uint ceilPow2m1(Uint v)
  * @param v the value to round up
  */
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint ceilPow2(Uint v)
+[[nodiscard]] constexpr Uint ceilPow2(Uint v) noexcept
 {
     return ceilPow2m1(v - 1) + 1;
 }
@@ -129,7 +129,7 @@ constexpr Uint ceilPow2(Uint v)
  * @param v the value to round down
  */
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint floorPow2(Uint v)
+[[nodiscard]] constexpr Uint floorPow2(Uint v) noexcept
 {
     return ceilPow2m1(v >> 1) + 1;
 }
@@ -140,7 +140,7 @@ constexpr Uint floorPow2(Uint v)
  * @brief Naive implementation of log2 using repeated single-bit rightshifting.
  */
 template <typename Uint>
-constexpr Uint log2floor_naive(Uint val) noexcept
+[[nodiscard]] constexpr Uint log2floor_naive(Uint val) noexcept
 {
     Uint result = 0;
     while (val >>= 1) {
@@ -175,7 +175,7 @@ constexpr Uint log2floor_naive(Uint val) noexcept
     r |= shift;
  */
 template <typename Uint>
-constexpr Uint log2floor_fast(Uint v) noexcept
+[[nodiscard]] constexpr Uint log2floor_fast(Uint v) noexcept
 {
     constexpr std::size_t iterations = log2bits_v<Uint>;
     unsigned result = 0;
@@ -204,7 +204,7 @@ constexpr unsigned char MultiplyDeBruijnBitPosition[32] = {0,  9,  1,  10, 13, 2
  * See https://graphics.stanford.edu/~seander/bithacks.html#IntegerLogDeBruijn.
  * @param val the value
  */
-constexpr std::uint32_t log2floor_debruijn(std::uint32_t val) noexcept
+[[nodiscard]] constexpr std::uint32_t log2floor_debruijn(std::uint32_t val) noexcept
 {
     constexpr std::uint32_t magic = 0x07C4ACDD;
 
@@ -228,7 +228,7 @@ constexpr std::uint32_t log2floor_debruijn(std::uint32_t val) noexcept
  * @return the floored binary logarithm
  */
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint log2floor(Uint v) noexcept
+[[nodiscard]] constexpr Uint log2floor(Uint v) noexcept
 {
 #ifdef BITMANIP_HAS_BUILTIN_LOG2FLOOR
     if (not builtin::isconsteval()) {
@@ -256,7 +256,7 @@ constexpr Uint log2floor(Uint v) noexcept
  * @return the floored binary logarithm
  */
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint log2ceil(Uint val) noexcept
+[[nodiscard]] constexpr Uint log2ceil(Uint val) noexcept
 {
     const Uint result = log2floor(val);
     return result + not isPow2or0(val);
@@ -267,7 +267,7 @@ constexpr Uint log2ceil(Uint val) noexcept
  * Examples: bitLength(0) = 1, bitLength(3) = 2, bitLength(123) = 7, bitLength(4) = 3
  */
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint bitCount(Uint val) noexcept
+[[nodiscard]] constexpr Uint bitCount(Uint val) noexcept
 {
     return log2floor(val) + 1;
 }
@@ -280,7 +280,7 @@ namespace detail {
  * @brief Naive implementation of log base N using repeated division.
  */
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint logFloor_naive(Uint val, unsigned base) noexcept
+[[nodiscard]] constexpr Uint logFloor_naive(Uint val, unsigned base) noexcept
 {
     Uint result = 0;
     while (val /= base) {
@@ -309,7 +309,7 @@ namespace detail {
  * This method is slightly more sophisticated than logFloor_naive because it avoids division.
  */
 template <unsigned BASE, BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint logFloor_simple(Uint val) noexcept
+[[nodiscard]] constexpr Uint logFloor_simple(Uint val) noexcept
 {
     constexpr Uint limit = maxExp<BASE, Uint>;
 
@@ -327,7 +327,8 @@ constexpr Uint logFloor_simple(Uint val) noexcept
  * @brief Tiny array implementation to avoid including <array>.
  */
 template <typename T, std::size_t N>
-struct Table {
+struct [[nodiscard]] Table
+{
     static_assert(N != 0, "Can't create zero-size tables");
 
     using value_type = T;
@@ -362,14 +363,14 @@ struct Table {
 
 /// Unsafe fixed point multiplication between Q32.32 and Q64.0
 /// Unsafe because for large numbers, this operation can overflow.
-constexpr std::uint64_t unsafeMulQ32o32Q64(std::uint64_t q32o32, std::uint64_t q64) noexcept
+[[nodiscard]] constexpr std::uint64_t unsafeMulQ32o32Q64(std::uint64_t q32o32, std::uint64_t q64) noexcept
 {
     return q32o32 * q64 >> std::uint64_t{32};
 }
 
 /// Unsafe fixed point multiplication between Q16.16 and Q32.0
 /// Unsafe because for large numbers, this operation can overflow.
-constexpr std::uint32_t unsafeMulQ16o16Q32(std::uint32_t q16o16, std::uint32_t q32) noexcept
+[[nodiscard]] constexpr std::uint32_t unsafeMulQ16o16Q32(std::uint32_t q16o16, std::uint32_t q32) noexcept
 {
     return q16o16 * q32 >> std::uint32_t{16};
 }
@@ -380,7 +381,7 @@ constexpr std::uint32_t unsafeMulQ16o16Q32(std::uint32_t q16o16, std::uint32_t q
  * @param b the second integer
  * @return -1 if a is lower, 1 if a is greater, 0 otherwise (if they are equal).
  */
-constexpr int cmpU64(std::uint64_t a, std::uint64_t b) noexcept
+[[nodiscard]] constexpr int cmpU64(std::uint64_t a, std::uint64_t b) noexcept
 {
     return (b < a) - (a < b);
 }
@@ -392,7 +393,7 @@ constexpr int cmpU64(std::uint64_t a, std::uint64_t b) noexcept
  * @return the table of approximate logarithms
  */
 template <typename Uint, std::size_t BASE>
-constexpr Table<unsigned char, bits_v<Uint>> makeGuessTable() noexcept
+[[nodiscard]] constexpr Table<unsigned char, bits_v<Uint>> makeGuessTable() noexcept
 {
     Table<unsigned char, bits_v<Uint>> result{};
     for (std::size_t i = 0; i < result.size(); ++i) {
@@ -403,8 +404,8 @@ constexpr Table<unsigned char, bits_v<Uint>> makeGuessTable() noexcept
 }
 
 template <std::size_t SIZE>
-constexpr int compareApproximationToGuessTable(std::uint64_t approxFactor,
-                                               const Table<unsigned char, SIZE> &table) noexcept
+[[nodiscard]] constexpr int compareApproximationToGuessTable(std::uint64_t approxFactor,
+                                                             const Table<unsigned char, SIZE> &table) noexcept
 {
     for (unsigned b = 0; b < SIZE; ++b) {
         std::uint64_t actualLog = table[b];
@@ -430,7 +431,7 @@ constexpr std::uint64_t NO_APPROXIMATION = ~std::uint64_t{0};
  * @return the fixed-point number approximating the table
  */
 template <std::size_t SIZE>
-constexpr std::uint64_t approximateGuessTable(const Table<unsigned char, SIZE> &table) noexcept
+[[nodiscard]] constexpr std::uint64_t approximateGuessTable(const Table<unsigned char, SIZE> &table) noexcept
 {
     std::uint64_t result = 0;
     for (unsigned b = 33; b-- != 0;) {
@@ -447,7 +448,8 @@ constexpr std::uint64_t approximateGuessTable(const Table<unsigned char, SIZE> &
 }
 
 template <typename Uint, std::size_t BASE>
-struct LogFloorGuesser {
+struct [[nodiscard]] LogFloorGuesser
+{
     static constexpr Table<unsigned char, bits_v<Uint>> guessTable = makeGuessTable<Uint, BASE>();
     static constexpr std::uint64_t guessTableApproximation = approximateGuessTable(guessTable);
 
@@ -472,7 +474,7 @@ struct LogFloorGuesser {
 };
 
 template <typename Uint, std::size_t BASE, typename TableUint = nextLargerUintType<Uint>>
-constexpr auto makePowerTable() noexcept
+[[nodiscard]] constexpr auto makePowerTable() noexcept
 {
     // the size of the table is maxExp<BASE, Uint> + 2 because we need to store the maximum power
     // +1 because we need to store maxExp, which is an index, not a size
@@ -500,7 +502,7 @@ constexpr auto powConst_powers = detail::makePowerTable<Uint, BASE, Uint>();
  * @brief Computes pow(BASE, exponent) where BASE is known at compile-time.
  */
 template <std::size_t BASE, BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint powConst(const Uint exponent) noexcept
+[[nodiscard]] constexpr Uint powConst(const Uint exponent) noexcept
 {
     if constexpr (isPow2(BASE)) {
         return Uint{1} << (exponent * log2floor(BASE));
@@ -527,7 +529,8 @@ constexpr Uint powConst(const Uint exponent) noexcept
  * @return floor(log(val, BASE))
  */
 template <std::size_t BASE = 10, typename Uint>
-constexpr auto logFloor(const Uint val) noexcept -> std::enable_if_t<(std::is_unsigned_v<Uint> && BASE >= 2), Uint>
+[[nodiscard]] constexpr auto logFloor(const Uint val) noexcept
+    -> std::enable_if_t<(std::is_unsigned_v<Uint> && BASE >= 2), Uint>
 {
     if constexpr (isPow2(BASE)) {
         return log2floor(val) / log2floor(BASE);
@@ -566,7 +569,7 @@ constexpr auto logFloor(const Uint val) noexcept -> std::enable_if_t<(std::is_un
  * @brief Convenience function that forwards to logFloor<10>.
  */
 template <typename Uint>
-constexpr auto log10floor(const Uint val) noexcept -> std::enable_if_t<std::is_unsigned_v<Uint>, Uint>
+[[nodiscard]] constexpr auto log10floor(const Uint val) noexcept -> std::enable_if_t<std::is_unsigned_v<Uint>, Uint>
 {
     return logFloor<10, Uint>(val);
 }
@@ -575,7 +578,8 @@ constexpr auto log10floor(const Uint val) noexcept -> std::enable_if_t<std::is_u
  * @brief Computes the number of digits required to represent a number with a given base.
  */
 template <std::size_t BASE = 10, typename Uint>
-constexpr auto digitCount(const Uint val) noexcept -> std::enable_if_t<(std::is_unsigned_v<Uint> && BASE >= 2), Uint>
+[[nodiscard]] constexpr auto digitCount(const Uint val) noexcept
+    -> std::enable_if_t<(std::is_unsigned_v<Uint> && BASE >= 2), Uint>
 {
     return logFloor<BASE>(val) + 1;
 }

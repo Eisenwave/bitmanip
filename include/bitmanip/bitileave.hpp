@@ -264,13 +264,13 @@ template <typename... Uint>
 }
 
 template <std::size_t N, typename Uint>
-constexpr auto ileave(Uint out[N]) noexcept -> std::enable_if_t<areUnsigned<Uint>, unsigned long long>
+[[nodiscard]] constexpr auto ileave(Uint out[N]) noexcept -> std::enable_if_t<areUnsigned<Uint>, unsigned long long>
 {
     return detail::ileave_arr_impl(std::make_index_sequence<N>{}, out);
 }
 
 template <typename Uint, std::size_t N>
-constexpr auto ileave(Uint (&out)[N]) noexcept -> std::enable_if_t<areUnsigned<Uint>, unsigned long long>
+[[nodiscard]] constexpr auto ileave(Uint (&out)[N]) noexcept -> std::enable_if_t<areUnsigned<Uint>, unsigned long long>
 {
     return detail::ileave_arr_impl(std::make_index_sequence<N>{}, out);
 }

@@ -17,7 +17,7 @@ namespace bitmanip {
 namespace detail {
 
 template <typename T>
-constexpr signed char divSgn(T n)
+[[nodiscard]] constexpr signed char divSgn(T n)
 {
     if constexpr (std::is_unsigned_v<T>) {
         return 1;
@@ -61,7 +61,7 @@ using commonSignedType = std::conditional_t<std::is_unsigned_v<A> && std::is_uns
  * @return trunc(x / y)
  */
 template <typename Dividend, typename Divisor>
-constexpr commonSignedType<Dividend, Divisor> divTrunc(Dividend x, Divisor y) noexcept
+[[nodiscard]] constexpr commonSignedType<Dividend, Divisor> divTrunc(Dividend x, Divisor y) noexcept
 {
     auto cx = static_cast<commonSignedType<Dividend, Divisor>>(x);
     auto cy = static_cast<commonSignedType<Dividend, Divisor>>(y);
@@ -77,7 +77,7 @@ constexpr commonSignedType<Dividend, Divisor> divTrunc(Dividend x, Divisor y) no
  * @return ceil(x / y)
  */
 template <typename Dividend, typename Divisor>
-constexpr commonSignedType<Dividend, Divisor> divCeil(Dividend x, Divisor y) noexcept
+[[nodiscard]] constexpr commonSignedType<Dividend, Divisor> divCeil(Dividend x, Divisor y) noexcept
 {
     const bool quotientPositive = (x >= 0) == (y >= 0);
 
@@ -104,7 +104,7 @@ constexpr commonSignedType<Dividend, Divisor> divCeil(Dividend x, Divisor y) noe
  * @return floor(x / y)
  */
 template <typename Dividend, typename Divisor>
-constexpr commonSignedType<Dividend, Divisor> divFloor(Dividend x, Divisor y) noexcept
+[[nodiscard]] constexpr commonSignedType<Dividend, Divisor> divFloor(Dividend x, Divisor y) noexcept
 {
     const bool quotientNegative = (x >= 0) != (y >= 0);
 
@@ -128,7 +128,7 @@ constexpr commonSignedType<Dividend, Divisor> divFloor(Dividend x, Divisor y) no
  * @param up(x / y)
  */
 template <typename Dividend, typename Divisor>
-constexpr commonSignedType<Dividend, Divisor> divMagnify(Dividend x, Divisor y) noexcept
+[[nodiscard]] constexpr commonSignedType<Dividend, Divisor> divMagnify(Dividend x, Divisor y) noexcept
 {
     signed char quotientSgn = detail::divSgn(x) * detail::divSgn(y);
 
@@ -156,7 +156,7 @@ constexpr Rounding DEFAULT_ROUND_TIE_BREAK = Rounding::MAGNIFY;
  * @param round(x / y)
  */
 template <Rounding TIE_BREAK = DEFAULT_ROUND_TIE_BREAK, typename Dividend, typename Divisor>
-constexpr commonSignedType<Dividend, Divisor> divRound(Dividend x, Divisor y) noexcept
+[[nodiscard]] constexpr commonSignedType<Dividend, Divisor> divRound(Dividend x, Divisor y) noexcept
 {
     signed char sgnX = x < 0 ? -1 : 1;
     signed char sgnY = y < 0 ? -1 : 1;
@@ -191,7 +191,7 @@ constexpr commonSignedType<Dividend, Divisor> divRound(Dividend x, Divisor y) no
  * @return (x / y), rounded with the chosen mode and tie break
  */
 template <Rounding ROUND, Rounding TIE_BREAK = DEFAULT_ROUND_TIE_BREAK, typename Dividend, typename Divisor>
-constexpr commonSignedType<Dividend, Divisor> div(Dividend x, Divisor y) noexcept
+[[nodiscard]] constexpr commonSignedType<Dividend, Divisor> div(Dividend x, Divisor y) noexcept
 {
     if constexpr (ROUND == Rounding::TRUNC) {
         return divTrunc(x, y);
@@ -213,7 +213,7 @@ constexpr commonSignedType<Dividend, Divisor> div(Dividend x, Divisor y) noexcep
 // UNSIGNED REMAINDER (MODULUS) ========================================================================================
 
 template <typename Int, typename Uint, std::enable_if_t<(std::is_integral_v<Int> && std::is_unsigned_v<Uint>), int> = 0>
-constexpr Uint umod(Int n, Uint mod) noexcept
+[[nodiscard]] constexpr Uint umod(Int n, Uint mod) noexcept
 {
     if constexpr (std::is_unsigned_v<Int>) {
         return n % mod;
@@ -227,20 +227,20 @@ constexpr Uint umod(Int n, Uint mod) noexcept
 // MIDPOINT ============================================================================================================
 
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint midpointFloor(Uint x, Uint y)
+[[nodiscard]] constexpr Uint midpointFloor(Uint x, Uint y)
 {
     Uint sum = x + y;
     return sum >> Uint{1} | makeHighest<Uint>(sum < x);
 }
 
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint midpointCeil(Uint x, Uint y)
+[[nodiscard]] constexpr Uint midpointCeil(Uint x, Uint y)
 {
     return midpointFloor(x, y) + ((x + y) & Uint{1});
 }
 
 template <BITMANIP_UNSIGNED_TYPENAME(Uint)>
-constexpr Uint midpointToLeft(Uint x, Uint y)
+[[nodiscard]] constexpr Uint midpointToLeft(Uint x, Uint y)
 {
     return midpointFloor(x, y) + ((x + y) & Uint{1} & Uint{x > y});
 }
